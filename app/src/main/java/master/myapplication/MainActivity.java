@@ -8,14 +8,16 @@ import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.os.Bundle;
 import android.widget.TextView;
+import org.tensorflow.lite.Interpreter;
 
+import java.io.File;
 
 public class MainActivity extends AppCompatActivity implements SensorEventListener {
     private float position[] = new float[3];
     private float velocity[] = new float[3];
     private float accelaration[] = new float[3];
     private float currentRotation;
-
+    private Interpreter tfHelper;
     private SensorManager mSensorManager;
     private Sensor mAccelerometer;
     private Sensor mRotationalVelocity;
@@ -117,29 +119,13 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     public void onAccuracyChanged(Sensor sensor, int accuracy) {
 
     }
+/*
+    public void useNN(){
+        this.tfHelper.run();
+        this.tfHelper.
+    }
 
-
-    // Load the TensorFlow Lite model
- /*   Interpreter interpreter = new Interpreter(new File("/path/to/tflite/model.tflite"));
-
-// Allocate memory for the model's input and output tensors
-interpreter.allocateTensors();
-
-    // Get the input and output tensor shapes
-    int inputTensorIndex = 0; // Replace with the index of your model's input tensor
-    int[] inputShape = interpreter.getInputTensor(inputTensorIndex).shape();
-    int outputTensorIndex = 0; // Replace with the index of your model's output tensor
-    int[] outputShape = interpreter.getOutputTensor(outputTensorIndex).shape();
-
-    // Prepare the input data
-    float[][] inputData = new float[...][...]; // Replace with your input data
-
-    // Run inference on the input data
-    float[][] outputData = new float[...][...]; // Replace with the shape of your output tensor
-interpreter.run(inputData, outputData);
-
-// Use the output data
-*/
+ */
 }
 
 
