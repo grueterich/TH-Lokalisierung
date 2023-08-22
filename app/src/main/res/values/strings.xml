@@ -1,0 +1,15 @@
+<resources>
+    <string name="app_name" translatable="false">THNavigator</string>
+    <string name="values_overview" translatable="false">Test Werte</string>
+    <string name="x_title" translatable="false">X</string>
+    <string name="y_title" translatable="false">Y</string>
+    <string name="z_title" translatable="false">Z</string>
+    <string name="velocity_title" translatable="false">Geschwindigkeit</string>
+    <string name="sesnsor_data" translatable="false">Sensor Daten</string>
+    <string name="accel_x" translatable="false">Beschleunigung X</string>
+    <string name="accel_y" translatable="false">Beschleunigung Y</string>
+    <string name="accel_z" translatable="false">Beschleunigung Z</string>
+    <string name="rotate_x" translatable="false">Rotation X</string>
+    <string name="rotate_y" translatable="false">Rotation Y</string>
+    <string name="rotate_z" translatable="false">Rotation Z</string>
+</resources>

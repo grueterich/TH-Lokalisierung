@@ -1,0 +1,145 @@
+package master.myapplication;
+
+import androidx.appcompat.app.AppCompatActivity;
+
+import android.hardware.Sensor;
+import android.hardware.SensorEvent;
+import android.hardware.SensorEventListener;
+import android.hardware.SensorManager;
+import android.os.Bundle;
+import android.widget.TextView;
+
+
+public class MainActivity extends AppCompatActivity implements SensorEventListener {
+    private float position[] = new float[3];
+    private float velocity[] = new float[3];
+    private float accelaration[] = new float[3];
+    private float currentRotation;
+
+    private SensorManager mSensorManager;
+    private Sensor mAccelerometer;
+    private Sensor mRotationalVelocity;
+    private long lastTimeStampLinear;
+    private long lastTimeStampRotation;
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        this.position[0] = 0;
+        this.position[1] = 0;
+        this.position[2] = 0;
+        this.velocity[0] = 0;
+        this.velocity[1] = 0;
+        this.velocity[2] = 0;
+        this.currentRotation=0;
+        setContentView(R.layout.activity_main);
+
+        mSensorManager = (SensorManager)getSystemService(SENSOR_SERVICE);
+        mAccelerometer = mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
+
+    }
+
+    private void changePosition(float x, float y, float z) {
+
+        this.position[0] = (float) (x*Math.cos(this.currentRotation)+y*Math.sin(this.currentRotation));
+        this.position[1] = (float) (-x*Math.sin(this.currentRotation)+y*Math.cos(this.currentRotation));
+       //We rotate alonge the z-azis, so this value stays the same
+        this.position[2] = z;
+        String xOutput = Float.toString(x);
+        TextView xValue = findViewById(R.id.x_value);
+        xValue.setText(xOutput);
+        String yOutput = Float.toString(y);
+        TextView yValue = findViewById(R.id.y_value);
+        yValue.setText(yOutput);
+        String zOutput = Float.toString(z);
+        TextView zValue = findViewById(R.id.z_value);
+        zValue.setText(zOutput);
+    }
+    private void updatePosition(float accileration_x, float accileration_y, float accileration_z, long timeStamp) {
+        if(this.lastTimeStampLinear == 0) {
+            this.lastTimeStampLinear = timeStamp;
+        }
+        double timeInterval = (timeStamp - lastTimeStampLinear) / 1000000000.0;
+        this.accelaration[0]=accileration_x;
+        this.accelaration[1]=accileration_y;
+        this.accelaration[2]=accileration_z;
+
+        this.velocity[0]=(float)(this.accelaration[0]*timeInterval+this.velocity[0]);
+        this.velocity[1]=(float)(this.accelaration[1]*timeInterval+this.velocity[1]);
+        this.velocity[2]=(float)(this.accelaration[2]*timeInterval+this.velocity[2]);
+
+        float newPositionX=(float)(0.5*this.position[0]*this.accelaration[0]*timeInterval*timeInterval);
+        float newPositionY=(float)(0.5*this.position[1]*this.accelaration[1]*timeInterval*timeInterval);
+        float newPositionZ=(float)(0.5*this.position[2]*this.accelaration[2]*timeInterval*timeInterval);
+
+        changePosition(newPositionX,newPositionY,newPositionZ);
+    }
+    private void updateRotation(float rotation_z) {
+        this.currentRotation=rotation_z;
+        //Position stays the same, but with the values change with the new rotation
+        changePosition(this.position[0],this.position[1],this.position[2]);
+    }
+
+
+    private void changeVelocity(float v) {
+        this.velocity[0] = v;
+        String velOutput = Float.toString(v);
+        TextView vlValue = findViewById(R.id.velocity_value);
+        vlValue.setText(velOutput);
+    }
+
+    protected void onResume() {
+        super.onResume();
+        mSensorManager.registerListener(this, mAccelerometer, SensorManager.SENSOR_DELAY_NORMAL);
+    }
+
+    protected void onPause() {
+        super.onPause();
+        mSensorManager.unregisterListener(this);
+    }
+
+
+    public void onSensorChanged(SensorEvent event) {
+        if (event.sensor.getType() == Sensor.TYPE_LINEAR_ACCELERATION) { //Sensor.TYPE_ACCELEROMETER Sensor.Type //Sensor.TYPE_ACCELEROMETER_UNCALIBRATED
+            updatePosition(event.values[0],event.values[1],event.values[2],event.timestamp);
+            ((TextView) findViewById(R.id.accValueX)).setText(Float.valueOf(event.values[0]).toString());
+            ((TextView) findViewById(R.id.accValueY)).setText(Float.valueOf(event.values[1]).toString());
+            ((TextView) findViewById(R.id.accValueZ)).setText(Float.valueOf(event.values[2]).toString());
+
+        } else if (event.sensor.getType() == Sensor.TYPE_GYROSCOPE) { //Sensor.TYPE_GYROSCOPE_UNCALIBRATED
+            updateRotation(event.values[2]);
+            ((TextView) findViewById(R.id.rotateValueX)).setText(Float.valueOf(event.values[0]).toString());
+            ((TextView) findViewById(R.id.rotateValueY)).setText(Float.valueOf(event.values[1]).toString());
+            ((TextView) findViewById(R.id.rotateValueZ)).setText(Float.valueOf(event.values[2]).toString());
+        }
+    }
+
+    @Override
+    public void onAccuracyChanged(Sensor sensor, int accuracy) {
+
+    }
+
+
+    // Load the TensorFlow Lite model
+ /*   Interpreter interpreter = new Interpreter(new File("/path/to/tflite/model.tflite"));
+
+// Allocate memory for the model's input and output tensors
+interpreter.allocateTensors();
+
+    // Get the input and output tensor shapes
+    int inputTensorIndex = 0; // Replace with the index of your model's input tensor
+    int[] inputShape = interpreter.getInputTensor(inputTensorIndex).shape();
+    int outputTensorIndex = 0; // Replace with the index of your model's output tensor
+    int[] outputShape = interpreter.getOutputTensor(outputTensorIndex).shape();
+
+    // Prepare the input data
+    float[][] inputData = new float[...][...]; // Replace with your input data
+
+    // Run inference on the input data
+    float[][] outputData = new float[...][...]; // Replace with the shape of your output tensor
+interpreter.run(inputData, outputData);
+
+// Use the output data
+*/
+}
+
+
