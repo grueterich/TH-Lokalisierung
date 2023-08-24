@@ -7,6 +7,7 @@ import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.os.Bundle;
+import android.util.Log;
 import android.widget.TextView;
 import org.tensorflow.lite.Interpreter;
 
@@ -101,7 +102,8 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
 
     public void onSensorChanged(SensorEvent event) {
-        if (event.sensor.getType() == Sensor.TYPE_LINEAR_ACCELERATION) { //Sensor.TYPE_ACCELEROMETER Sensor.Type //Sensor.TYPE_ACCELEROMETER_UNCALIBRATED
+        Log.d("Sensorevent","Event: "+event.sensor.getName()+" "+event.sensor.getType());
+        if (event.sensor.getType() == Sensor.TYPE_ACCELEROMETER) { //Sensor.TYPE_ACCELEROMETER Sensor.Type //Sensor.TYPE_ACCELEROMETER_UNCALIBRATED /7Sensor.TYPE_LINEAR_ACCELERATION
             updatePosition(event.values[0],event.values[1],event.values[2],event.timestamp);
             ((TextView) findViewById(R.id.accValueX)).setText(Float.valueOf(event.values[0]).toString());
             ((TextView) findViewById(R.id.accValueY)).setText(Float.valueOf(event.values[1]).toString());
