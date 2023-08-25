@@ -42,10 +42,11 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     }
 
     private void changePosition(float x, float y, float z) {
-
+        Log.d("Position",x+" "+y+" "+z);
         this.position[0] = (float) (x*Math.cos(this.currentRotation)+y*Math.sin(this.currentRotation));
         this.position[1] = (float) (-x*Math.sin(this.currentRotation)+y*Math.cos(this.currentRotation));
-       //We rotate alonge the z-azis, so this value stays the same
+        Log.d("Position",this.position[0]+" "+this.position[1]+" "+z);
+        //We rotate alonge the z-azis, so this value stays the same
         this.position[2] = z;
         String xOutput = Float.toString(x);
         TextView xValue = findViewById(R.id.x_value);
@@ -70,9 +71,10 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         this.velocity[1]=(float)(this.accelaration[1]*timeInterval+this.velocity[1]);
         this.velocity[2]=(float)(this.accelaration[2]*timeInterval+this.velocity[2]);
 
-        float newPositionX=(float)(0.5*this.position[0]*this.accelaration[0]*timeInterval*timeInterval);
-        float newPositionY=(float)(0.5*this.position[1]*this.accelaration[1]*timeInterval*timeInterval);
-        float newPositionZ=(float)(0.5*this.position[2]*this.accelaration[2]*timeInterval*timeInterval);
+        float newPositionX=(float)(this.position[0]+0.5*this.accelaration[0]*timeInterval*timeInterval+this.velocity[0]*timeInterval);
+        float newPositionY=(float)(this.position[1]+0.5*this.accelaration[1]*timeInterval*timeInterval+this.velocity[1]*timeInterval);
+        float newPositionZ=(float)(this.position[2]+0.5*this.accelaration[2]*timeInterval*timeInterval+this.velocity[2]*timeInterval);
+        Log.d("Position",this.velocity[0]+" "+this.velocity[1]+" "+this.velocity[2]);
 
         changePosition(newPositionX,newPositionY,newPositionZ);
     }
