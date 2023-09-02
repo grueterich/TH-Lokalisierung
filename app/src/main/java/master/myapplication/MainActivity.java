@@ -9,6 +9,8 @@ import android.hardware.SensorManager;
 import android.os.Bundle;
 import android.util.Log;
 import android.widget.TextView;
+import android.widget.Toast;
+
 import org.tensorflow.lite.Interpreter;
 
 import java.io.File;
@@ -38,7 +40,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
         mSensorManager = (SensorManager)getSystemService(SENSOR_SERVICE);
         mAccelerometer = mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
-
+        mRotationalVelocity = mSensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE);
     }
 
     private void changePosition(float x, float y, float z) {
@@ -95,8 +97,9 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     protected void onResume() {
         super.onResume();
         mSensorManager.registerListener(this, mAccelerometer, SensorManager.SENSOR_DELAY_NORMAL);
+        mSensorManager.registerListener(this, mRotationalVelocity, SensorManager.SENSOR_DELAY_NORMAL);
+        Log.d("error", "ales fine");
     }
-
     protected void onPause() {
         super.onPause();
         mSensorManager.unregisterListener(this);
