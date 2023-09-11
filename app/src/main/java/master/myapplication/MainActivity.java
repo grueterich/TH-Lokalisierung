@@ -2,6 +2,7 @@ package master.myapplication;
 
 import androidx.appcompat.app.AppCompatActivity;
 
+import android.content.res.AssetManager;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
@@ -9,9 +10,20 @@ import android.hardware.SensorManager;
 import android.os.Bundle;
 import android.util.Log;
 import android.widget.TextView;
+
+import org.pytorch.LiteModuleLoader;
+import org.pytorch.Module;
 import org.tensorflow.lite.Interpreter;
+import org.tensorflow.lite.Tensor;
 
 import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Random;
 
 public class MainActivity extends AppCompatActivity implements SensorEventListener {
     private float position[] = new float[3];
@@ -21,9 +33,11 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private Interpreter tfHelper;
     private SensorManager mSensorManager;
     private Sensor mAccelerometer;
+    private Sensor mRotation;
     private Sensor mRotationalVelocity;
     private long lastTimeStampLinear;
     private long lastTimeStampRotation;
+    private Module module;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -38,6 +52,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
         mSensorManager = (SensorManager)getSystemService(SENSOR_SERVICE);
         mAccelerometer = mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
+         mRotation= mSensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE);
 
     }
 
@@ -77,6 +92,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         Log.d("Position",this.velocity[0]+" "+this.velocity[1]+" "+this.velocity[2]);
 
         changePosition(newPositionX,newPositionY,newPositionZ);
+        useNN();
     }
     private void updateRotation(float rotation_z) {
         this.currentRotation=rotation_z;
@@ -95,6 +111,8 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     protected void onResume() {
         super.onResume();
         mSensorManager.registerListener(this, mAccelerometer, SensorManager.SENSOR_DELAY_NORMAL);
+        mSensorManager.registerListener(this, mRotation, SensorManager.SENSOR_DELAY_NORMAL);
+
     }
 
     protected void onPause() {
@@ -111,7 +129,14 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             ((TextView) findViewById(R.id.accValueY)).setText(Float.valueOf(event.values[1]).toString());
             ((TextView) findViewById(R.id.accValueZ)).setText(Float.valueOf(event.values[2]).toString());
 
-        } else if (event.sensor.getType() == Sensor.TYPE_GYROSCOPE) { //Sensor.TYPE_GYROSCOPE_UNCALIBRATED
+        }
+        if (event.sensor.getType() == Sensor.TYPE_GYROSCOPE) { //Sensor.TYPE_GYROSCOPE_UNCALIBRATED
+            updateRotation(event.values[2]);
+            ((TextView) findViewById(R.id.rotateValueX)).setText(Float.valueOf(event.values[0]).toString());
+            ((TextView) findViewById(R.id.rotateValueY)).setText(Float.valueOf(event.values[1]).toString());
+            ((TextView) findViewById(R.id.rotateValueZ)).setText(Float.valueOf(event.values[2]).toString());
+        }
+        if (event.sensor.getType() == Sensor.TYPE_GYROSCOPE) { //Sensor.TYPE_GYROSCOPE_UNCALIBRATED
             updateRotation(event.values[2]);
             ((TextView) findViewById(R.id.rotateValueX)).setText(Float.valueOf(event.values[0]).toString());
             ((TextView) findViewById(R.id.rotateValueY)).setText(Float.valueOf(event.values[1]).toString());
@@ -123,13 +148,52 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     public void onAccuracyChanged(Sensor sensor, int accuracy) {
 
     }
-/*
+
     public void useNN(){
-        this.tfHelper.run();
-        this.tfHelper.
+
+// Load in the model
+        try {
+            String file=assetFilePath("checkpoint_gsn_latest.pt");
+       //     module = LiteModuleLoader.load(file);
+            module = LiteModuleLoader.load(assetFilePath("checkpoint_gsn_latest.pt"));
+            Log.d("model", "Model loaded"+ file);
+        } catch (Exception e) {
+            Log.e("model", "Unable to load model", e);
+        }
+    }
+    public String assetFilePath(String assetName) throws IOException {
+        File file = new File(this.getFilesDir(), assetName);
+        if (file.exists() && file.length() > 0) {
+            return file.getAbsolutePath();
+        }
+
+        try (InputStream is = this.getAssets().open(assetName)) {
+            try (OutputStream os = new FileOutputStream(file)) {
+                byte[] buffer = new byte[4 * 1024];
+                int read;
+                while ((read = is.read(buffer)) != -1) {
+                    os.write(buffer, 0, read);
+                }
+                os.flush();
+            }
+            Log.d("model",file.getAbsolutePath());
+            return file.getAbsolutePath();
+        }
     }
 
- */
+
+  /*  public Tensor generateTensor(long[] Size) {
+        // Create a random array of floats
+        Random rand = new Random();
+        float[] arr = new float[(int)(Size[0]*Size[1])];
+        for (int i = 0; i < Size[0]*Size[1]; i++) {
+            arr[i] = -10000 + rand.nextFloat() * (20000);
+        }
+
+        // Create the tensor and return it
+        return Tensor.fromBlob(arr, Size);
+    }
+*/
 }
 
 
