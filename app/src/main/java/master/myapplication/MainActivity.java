@@ -13,6 +13,8 @@ import android.widget.TextView;
 
 import org.pytorch.LiteModuleLoader;
 import org.pytorch.Module;
+import android.widget.Toast;
+
 import org.tensorflow.lite.Interpreter;
 import org.tensorflow.lite.Tensor;
 
@@ -111,8 +113,8 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     protected void onResume() {
         super.onResume();
         mSensorManager.registerListener(this, mAccelerometer, SensorManager.SENSOR_DELAY_NORMAL);
-        mSensorManager.registerListener(this, mRotation, SensorManager.SENSOR_DELAY_NORMAL);
-
+        mSensorManager.registerListener(this, mRotationalVelocity, SensorManager.SENSOR_DELAY_NORMAL);
+        Log.d("error", "ales fine");
     }
 
     protected void onPause() {
