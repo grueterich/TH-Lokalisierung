@@ -18,13 +18,12 @@
             <meta-data
                 android:name="android.app.lib_name"
                 android:value="" />
-        |
         <intent-filter>
                 <!-- Using data in MainActivity activity, make icon vanish-->
                 <!--data android:scheme="project"/-->
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
+        </intent-filter>
     </activity>
     </application>
 

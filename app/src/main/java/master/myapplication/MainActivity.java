@@ -2,6 +2,7 @@ package master.myapplication;
 
 import androidx.appcompat.app.AppCompatActivity;
 
+import android.content.Context;
 import android.content.res.AssetManager;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
@@ -11,10 +12,9 @@ import android.os.Bundle;
 import android.util.Log;
 import android.widget.TextView;
 
+
 import org.pytorch.LiteModuleLoader;
 import org.pytorch.Module;
-import android.widget.Toast;
-
 import org.tensorflow.lite.Interpreter;
 import org.tensorflow.lite.Tensor;
 
@@ -39,8 +39,8 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private Sensor mRotationalVelocity;
     private long lastTimeStampLinear;
     private long lastTimeStampRotation;
+
     private Module module;
-    @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         this.position[0] = 0;
@@ -151,25 +151,38 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
     }
 
-    public void useNN(){
 
+
+    public void useNN(){
+        AssetManager assetManager = getAssets();
+        try {
+            String[] files = assetManager.list("data");
+
+            for(int i=0; i<files.length; i++){
+                Log.d("TestActivity", files[i]);
+            }
+        } catch (IOException e1) {
+            // TODO Auto-generated catch block
+            e1.printStackTrace();
+            Log.d("TestActivity","Nothing");
+        }
 // Load in the model
         try {
-            String file=assetFilePath("checkpoint_gsn_latest.pt");
-       //     module = LiteModuleLoader.load(file);
-            module = LiteModuleLoader.load(assetFilePath("checkpoint_gsn_latest.pt"));
-            Log.d("model", "Model loaded"+ file);
+            module = LiteModuleLoader.load(MainActivity.assetFilePath(getApplicationContext(), "checkpoint_10.pt"));
+            //   module = LiteModuleLoader.load(assetFilePath("checkpoint_10.pt"));
+      //      Log.d("model", "Model loaded"+ file);
         } catch (Exception e) {
-            Log.e("model", "Unable to load model", e);
+            Log.e("model", "Unable to load model for file", e);
         }
     }
-    public String assetFilePath(String assetName) throws IOException {
-        File file = new File(this.getFilesDir(), assetName);
+
+    public static String assetFilePath(Context context, String assetName) throws IOException {
+        File file = new File(context.getFilesDir(), assetName);
         if (file.exists() && file.length() > 0) {
             return file.getAbsolutePath();
         }
 
-        try (InputStream is = this.getAssets().open(assetName)) {
+        try (InputStream is = context.getAssets().open(assetName)) {
             try (OutputStream os = new FileOutputStream(file)) {
                 byte[] buffer = new byte[4 * 1024];
                 int read;
@@ -178,10 +191,8 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 }
                 os.flush();
             }
-            Log.d("model",file.getAbsolutePath());
             return file.getAbsolutePath();
         }
-    }
 
 
   /*  public Tensor generateTensor(long[] Size) {
@@ -195,7 +206,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         // Create the tensor and return it
         return Tensor.fromBlob(arr, Size);
     }
-*/
+*/}
 }
 
 
