@@ -2,7 +2,6 @@ package master.myapplication;
 
 import androidx.appcompat.app.AppCompatActivity;
 
-import android.content.Context;
 import android.content.res.AssetManager;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
@@ -168,21 +167,19 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         }
 // Load in the model
         try {
-            module = LiteModuleLoader.load(MainActivity.assetFilePath(getApplicationContext(), "checkpoint_10.pt"));
-            //   module = LiteModuleLoader.load(assetFilePath("checkpoint_10.pt"));
-      //      Log.d("model", "Model loaded"+ file);
+            String file=assetFilePath("checkpoint_latest.pt");
+            module = LiteModuleLoader.load(file);
         } catch (Exception e) {
             Log.e("model", "Unable to load model for file", e);
         }
     }
-
-    public static String assetFilePath(Context context, String assetName) throws IOException {
-        File file = new File(context.getFilesDir(), assetName);
+    public String assetFilePath(String assetName) throws IOException {
+        File file = new File(this.getFilesDir(), assetName);
         if (file.exists() && file.length() > 0) {
             return file.getAbsolutePath();
         }
 
-        try (InputStream is = context.getAssets().open(assetName)) {
+        try (InputStream is = this.getAssets().open(assetName)) {
             try (OutputStream os = new FileOutputStream(file)) {
                 byte[] buffer = new byte[4 * 1024];
                 int read;
@@ -191,8 +188,10 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 }
                 os.flush();
             }
+            Log.d("model2",file.getAbsolutePath());
             return file.getAbsolutePath();
         }
+    }
 
 
   /*  public Tensor generateTensor(long[] Size) {
@@ -206,7 +205,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         // Create the tensor and return it
         return Tensor.fromBlob(arr, Size);
     }
-*/}
+*/
 }
 
 
