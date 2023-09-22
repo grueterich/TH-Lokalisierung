@@ -167,8 +167,9 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         }
 // Load in the model
         try {
-            String file=assetFilePath("checkpoint_latest.pt");
+            String file=assetFilePath("checkpoint_jit_latest.pt");
             module = LiteModuleLoader.load(file);
+            Log.d("model2","it works");
         } catch (Exception e) {
             Log.e("model", "Unable to load model for file", e);
         }
@@ -176,6 +177,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     public String assetFilePath(String assetName) throws IOException {
         File file = new File(this.getFilesDir(), assetName);
         if (file.exists() && file.length() > 0) {
+            Log.d("model",file.getAbsolutePath());
             return file.getAbsolutePath();
         }
 
@@ -188,7 +190,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 }
                 os.flush();
             }
-            Log.d("model2",file.getAbsolutePath());
+            Log.d("model",file.getAbsolutePath());
             return file.getAbsolutePath();
         }
     }
