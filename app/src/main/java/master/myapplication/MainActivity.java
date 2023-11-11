@@ -1,8 +1,9 @@
 package master.myapplication;
 
+import static org.pytorch.Device.CPU;
+
 import androidx.appcompat.app.AppCompatActivity;
 
-import android.content.res.AssetManager;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
@@ -12,34 +13,65 @@ import android.util.Log;
 import android.widget.TextView;
 
 
+import org.pytorch.Device;
+import org.pytorch.IValue;
 import org.pytorch.LiteModuleLoader;
 import org.pytorch.Module;
+import org.pytorch.PyTorchAndroid;
+import org.pytorch.Tensor;
 import org.tensorflow.lite.Interpreter;
-import org.tensorflow.lite.Tensor;
 
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Random;
+import java.nio.FloatBuffer;
 
+import javax.vecmath.Quat4d;
 public class MainActivity extends AppCompatActivity implements SensorEventListener {
     private float position[] = new float[3];
     private float velocity[] = new float[3];
     private float accelaration[] = new float[3];
+    private float lastAcc[][] = new float[200][3];
+    private float gravity[]=new float[3];
+    private float magno[]=new float[3];
+
+   // private Queue<float> lastAcceleration= new Queue() {
+   // };
     private float currentRotation;
     private Interpreter tfHelper;
     private SensorManager mSensorManager;
+    private Sensor mAccelerometerUncal;
+    private Sensor mRotationUncal;
     private Sensor mAccelerometer;
-    private Sensor mRotation;
-    private Sensor mRotationalVelocity;
+    private Sensor mMangonemter;
+
     private long lastTimeStampLinear;
     private long lastTimeStampRotation;
-
     private Module module;
+
+    private Quat4d ori_q=new Quat4d();;
+    private Quat4d acc_uncal_q=new Quat4d();;
+    private Quat4d gyro_uncal_q=new Quat4d();;
+    private Quat4d gyro_q=new Quat4d();
+    private Quat4d gyro_q_temp=new Quat4d();
+    private Quat4d gyro_q_inv= new Quat4d();
+
+    private Quat4d acc_q= new Quat4d();
+    private Quat4d acc_q_temp= new Quat4d();
+    private Quat4d acc_q_inv= new Quat4d();
+    private float acc[] = new float[3];
+    private float gyro[] = new float[3];
+    private float acc_scale[] = {1,0.99f,1.02f};
+    private float acc_bias[] = {0.05f,0.12f,-0.07f};
+    private float gyro_bias[] = {0.03f,0.01f,-0.01f};
+    private float gyrofinal[] = new float[3];
+    private float accfinal[] = new float[3];
+
+    private int accRunner=0;
+    private int gyroRunner=0;
+
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         this.position[0] = 0;
@@ -52,8 +84,10 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         setContentView(R.layout.activity_main);
 
         mSensorManager = (SensorManager)getSystemService(SENSOR_SERVICE);
-        mAccelerometer = mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
-         mRotation= mSensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE);
+        mAccelerometerUncal = mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER_UNCALIBRATED);
+        mRotationUncal= mSensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE_UNCALIBRATED);
+        mAccelerometer=mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
+        mMangonemter=mSensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD);
 
     }
 
@@ -93,7 +127,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         Log.d("Position",this.velocity[0]+" "+this.velocity[1]+" "+this.velocity[2]);
 
         changePosition(newPositionX,newPositionY,newPositionZ);
-        useNN();
     }
     private void updateRotation(float rotation_z) {
         this.currentRotation=rotation_z;
@@ -111,9 +144,12 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
     protected void onResume() {
         super.onResume();
+        mSensorManager.registerListener(this, mAccelerometerUncal, SensorManager.SENSOR_DELAY_NORMAL);
+        mSensorManager.registerListener(this, mRotationUncal, SensorManager.SENSOR_DELAY_NORMAL);
         mSensorManager.registerListener(this, mAccelerometer, SensorManager.SENSOR_DELAY_NORMAL);
-        mSensorManager.registerListener(this, mRotationalVelocity, SensorManager.SENSOR_DELAY_NORMAL);
-        Log.d("error", "ales fine");
+        mSensorManager.registerListener(this, mMangonemter, SensorManager.SENSOR_DELAY_NORMAL);
+
+        Log.d("error", "alles fine");
     }
 
     protected void onPause() {
@@ -123,26 +159,114 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
 
     public void onSensorChanged(SensorEvent event) {
-        Log.d("Sensorevent","Event: "+event.sensor.getName()+" "+event.sensor.getType());
-        if (event.sensor.getType() == Sensor.TYPE_ACCELEROMETER) { //Sensor.TYPE_ACCELEROMETER Sensor.Type //Sensor.TYPE_ACCELEROMETER_UNCALIBRATED /7Sensor.TYPE_LINEAR_ACCELERATION
+        if(accRunner%10==0&&gyroRunner%10==0){
+            useNN();
+        }
+        Log.d("Sensorevent","Event: "+event.sensor.getName()+" "+event.sensor.getType()+" "+event.timestamp);
+        if (event.sensor.getType() == Sensor.TYPE_ACCELEROMETER_UNCALIBRATED) { //Sensor.TYPE_ACCELEROMETER Sensor.Type //Sensor.TYPE_ACCELEROMETER_UNCALIBRATED /7Sensor.TYPE_LINEAR_ACCELERATION
             updatePosition(event.values[0],event.values[1],event.values[2],event.timestamp);
             ((TextView) findViewById(R.id.accValueX)).setText(Float.valueOf(event.values[0]).toString());
             ((TextView) findViewById(R.id.accValueY)).setText(Float.valueOf(event.values[1]).toString());
             ((TextView) findViewById(R.id.accValueZ)).setText(Float.valueOf(event.values[2]).toString());
+            acc[0]=acc_scale[0]*(event.values[0]-acc_bias[0]);
+            acc[1]=acc_scale[1]*(event.values[1]-acc_bias[1]);
+            acc[2]=acc_scale[2]*(event.values[2]-acc_bias[2]);
 
+            acc_uncal_q=new Quat4d(acc[0],acc[1],acc[2],0);
+            acc_q_inv.inverse(acc_uncal_q);
+            acc_q_temp.mul(acc_uncal_q,ori_q);
+            acc_q.mul(acc_q_temp,gyro_q_inv);
+            accfinal[0]=(float)acc_q.x;
+            accfinal[1]=(float)acc_q.y;
+            accfinal[2]=(float)acc_q.z;
+            accRunner++;
         }
-        if (event.sensor.getType() == Sensor.TYPE_GYROSCOPE) { //Sensor.TYPE_GYROSCOPE_UNCALIBRATED
+        if (event.sensor.getType() == Sensor.TYPE_GYROSCOPE_UNCALIBRATED) { //Sensor.TYPE_GYROSCOPE_UNCALIBRATED
+            updateRotation(event.values[2]);
+            ((TextView) findViewById(R.id.rotateValueX)).setText(Float.valueOf(event.values[0]).toString());
+            ((TextView) findViewById(R.id.rotateValueY)).setText(Float.valueOf(event.values[1]).toString());
+            ((TextView) findViewById(R.id.rotateValueZ)).setText(Float.valueOf(event.values[2]).toString());
+
+            gyro[0]=event.values[0]-gyro_bias[0];
+            gyro[1]=event.values[1]-gyro_bias[1];
+            gyro[2]=event.values[2]-gyro_bias[2];
+
+            gyro_uncal_q= new Quat4d(gyro[0],gyro[1],gyro[2],0);
+            gyro_q_inv.inverse(gyro_uncal_q);
+            gyro_q_temp.mul(gyro_uncal_q,ori_q);
+            gyro_q.mul(gyro_q_temp,gyro_q_inv);
+            gyrofinal[0]=(float)gyro_q.x;
+            gyrofinal[1]=(float)gyro_q.y;
+            gyrofinal[2]=(float)gyro_q.z;
+            gyroRunner++;
+        }
+        /*if (event.sensor.getType() == Sensor.TYPE_GYROSCOPE) { //Sensor.TYPE_GYROSCOPE_UNCALIBRATED
             updateRotation(event.values[2]);
             ((TextView) findViewById(R.id.rotateValueX)).setText(Float.valueOf(event.values[0]).toString());
             ((TextView) findViewById(R.id.rotateValueY)).setText(Float.valueOf(event.values[1]).toString());
             ((TextView) findViewById(R.id.rotateValueZ)).setText(Float.valueOf(event.values[2]).toString());
         }
-        if (event.sensor.getType() == Sensor.TYPE_GYROSCOPE) { //Sensor.TYPE_GYROSCOPE_UNCALIBRATED
-            updateRotation(event.values[2]);
-            ((TextView) findViewById(R.id.rotateValueX)).setText(Float.valueOf(event.values[0]).toString());
-            ((TextView) findViewById(R.id.rotateValueY)).setText(Float.valueOf(event.values[1]).toString());
-            ((TextView) findViewById(R.id.rotateValueZ)).setText(Float.valueOf(event.values[2]).toString());
+        */
+        if (event.sensor.getType() == Sensor.TYPE_MAGNETIC_FIELD) {
+            magno= event.values;
         }
+        if (event.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
+            gravity= event.values;
+        }
+        if (gravity != null && magno != null) {
+            float R[] = new float[9];
+            float I[] = new float[9];
+            boolean success = SensorManager.getRotationMatrix(R, I, gravity, magno);
+            if (success) {
+
+                float orientation[] = new float[3];
+                SensorManager.getOrientation(R, orientation);
+                //Log.d("Sensorevent","Event: "+"Orientation0"+" "+orientation[2]);
+                //Log.d("Sensorevent","Event: "+"Orientation0"+" "+orientation[0]+" Orientation1"+" "+orientation[1]+" Orientation2"+" "+orientation[2]);
+                //Log.d("Sensorevent2","Event: "+"R"+" "+R[0]+" I"+" "+I[0]);
+              //  for (int xp=0;xp<R.length;xp++){
+              //      Log.d("Sensorevent2","Event: "+"R "+xp+" "+R[xp]);
+               // }
+
+                ori_q= toQuaternion(orientation[2],orientation[1],orientation[0]);
+             //   ori_q = new Quat4d(orientation[1]/(Math.PI),orientation[2]/(Math.PI/2),orientation[0]/(Math.PI),0);
+            }
+        }
+    }
+
+    Quat4d toQuaternion(double rollDeg, double pitchDeg, double azimuthDeg) // We get the orientation in degree
+    {
+        double roll=rollDeg*(Math.PI/180);
+        double pitch=pitchDeg*(Math.PI/180);
+        double azimuth=azimuthDeg*(Math.PI/180);
+
+        // Abbreviations for the various angular functions
+        double cr = Math.cos(roll * 0.5);
+        double sr = Math.sin(roll * 0.5);
+        double cp = Math.cos(pitch * 0.5);
+        double sp = Math.sin((pitch * 0.5));
+        double cy = Math.cos(azimuth * 0.5);
+        double sy = Math.sin((azimuth * 0.5));
+
+        Quat4d q=new Quat4d();
+        q.w = cr * cp * cy + sr * sp * sy;
+        q.x = sr * cp * cy - cr * sp * sy;
+        q.y = cr * sp * cy + sr * cp * sy;
+        q.z = cr * cp * sy - sr * sp * cy;
+
+        return q;
+    }
+    private void moveUpAcc(float value, float value1, float value2) {
+        for(int i=0;i<199;i++){
+            lastAcc[i][0]=lastAcc[i+1][0];
+            lastAcc[i][1]=lastAcc[i+1][1];
+            lastAcc[i][2]=lastAcc[i+1][2];
+            
+        }
+        lastAcc[199][0]=value;
+        lastAcc[199][1]=value1;
+        lastAcc[199][2]=value2;
+
     }
 
     @Override
@@ -150,29 +274,31 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
     }
 
-
-
     public void useNN(){
-        AssetManager assetManager = getAssets();
-        try {
-            String[] files = assetManager.list("data");
-
-            for(int i=0; i<files.length; i++){
-                Log.d("TestActivity", files[i]);
-            }
-        } catch (IOException e1) {
-            // TODO Auto-generated catch block
-            e1.printStackTrace();
-            Log.d("TestActivity","Nothing");
-        }
 // Load in the model
         try {
-            String file=assetFilePath("checkpoint_jit_latest.pt");
+            //String file=assetFilePath("checkpoint_jit_latest_light.ptl");
+            String file=assetFilePath("checkpoint_jit_latest_light.ptl");
             module = LiteModuleLoader.load(file);
-            Log.d("model2","it works");
+            Log.d("model2",module.toString());
         } catch (Exception e) {
             Log.e("model", "Unable to load model for file", e);
         }
+        float feature[] = new float[6];
+        System.arraycopy(gyrofinal,0,feature,0,3);
+        System.arraycopy(accfinal,0,feature,3,3);
+        long[] shape={1,1,6};
+        Tensor inTensor = Tensor.fromBlob(feature,shape);
+        Log.d("Tensor",inTensor.toString());
+        IValue value=IValue.from(inTensor);
+        try {
+             IValue res = module.forward(value);
+             Log.d("Ergebnis",res.toStr());
+        }catch(Error e){
+            Log.e("Ergebnis",e.toString());
+        }
+
+        changeVelocity(accRunner);
     }
     public String assetFilePath(String assetName) throws IOException {
         File file = new File(this.getFilesDir(), assetName);
@@ -193,6 +319,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             Log.d("model",file.getAbsolutePath());
             return file.getAbsolutePath();
         }
+     //   module.forward(gy)
     }
 
 
