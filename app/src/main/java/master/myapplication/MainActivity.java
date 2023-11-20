@@ -4,6 +4,7 @@ import static org.pytorch.Device.CPU;
 
 import androidx.appcompat.app.AppCompatActivity;
 
+import android.content.res.AssetFileDescriptor;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
@@ -22,11 +23,16 @@ import org.pytorch.Tensor;
 import org.tensorflow.lite.Interpreter;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.FloatBuffer;
+import java.nio.MappedByteBuffer;
+import java.nio.channels.FileChannel;
+import java.util.Arrays;
+import java.util.Map;
 
 import javax.vecmath.Quat4d;
 public class MainActivity extends AppCompatActivity implements SensorEventListener {
@@ -36,7 +42,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private float lastAcc[][] = new float[200][3];
     private float gravity[]=new float[3];
     private float magno[]=new float[3];
-
+    Interpreter tflite;
    // private Queue<float> lastAcceleration= new Queue() {
    // };
     private float currentRotation;
@@ -88,7 +94,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         mRotationUncal= mSensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE_UNCALIBRATED);
         mAccelerometer=mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
         mMangonemter=mSensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD);
-
     }
 
     private void changePosition(float x, float y, float z) {
@@ -275,10 +280,11 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     }
 
     public void useNN(){
+
 // Load in the model
         try {
+            String file=assetFilePath("checkpoint_lstm_jit_latest.pt");
             //String file=assetFilePath("checkpoint_jit_latest_light.ptl");
-            String file=assetFilePath("checkpoint_jit_latest_light.ptl");
             module = LiteModuleLoader.load(file);
             Log.d("model2",module.toString());
         } catch (Exception e) {
@@ -293,12 +299,31 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         IValue value=IValue.from(inTensor);
         try {
              IValue res = module.forward(value);
+
              Log.d("Ergebnis",res.toStr());
         }catch(Error e){
             Log.e("Ergebnis",e.toString());
         }
 
+
+      try {
+          MappedByteBuffer buffer=loadFile();
+          tflite = new Interpreter(buffer);
+          Log.d("Model",tflite.toString());
+        }catch (Exception ex){
+            Log.d("Model","Model not found", ex);
+            ex.printStackTrace();
+        }
+        float inputVal[] = new float[6];
+        System.arraycopy(gyrofinal,0,inputVal,0,3);
+        System.arraycopy(accfinal,0,inputVal,3,3);
+        float output[]=new float[2];
+        tflite.run(inputVal,output);
+
+
         changeVelocity(accRunner);
+
+
     }
     public String assetFilePath(String assetName) throws IOException {
         File file = new File(this.getFilesDir(), assetName);
@@ -319,22 +344,17 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             Log.d("model",file.getAbsolutePath());
             return file.getAbsolutePath();
         }
-     //   module.forward(gy)
     }
 
 
-  /*  public Tensor generateTensor(long[] Size) {
-        // Create a random array of floats
-        Random rand = new Random();
-        float[] arr = new float[(int)(Size[0]*Size[1])];
-        for (int i = 0; i < Size[0]*Size[1]; i++) {
-            arr[i] = -10000 + rand.nextFloat() * (20000);
-        }
-
-        // Create the tensor and return it
-        return Tensor.fromBlob(arr, Size);
+    private MappedByteBuffer loadFile() throws IOException {
+        AssetFileDescriptor fileDescriptor=this.getAssets().openFd("checkpoint_latest.tflite");
+        FileInputStream inputStream=new FileInputStream(fileDescriptor.getFileDescriptor());
+        FileChannel fileChannel=inputStream.getChannel();
+        long startOffset=fileDescriptor.getStartOffset();
+        long declareLength=fileDescriptor.getDeclaredLength();
+        return fileChannel.map(FileChannel.MapMode.READ_ONLY,startOffset,declareLength);
     }
-*/
 }
 
 

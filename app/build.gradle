@@ -43,4 +43,7 @@ dependencies {
     implementation 'org.pytorch:pytorch_android_lite:1.9.0'
     implementation 'org.pytorch:pytorch_android_torchvision:1.9.0'
     implementation 'javax.vecmath:vecmath:1.5.2'
+    implementation 'org.tensorflow:tensorflow-lite:2.8.0'
+    implementation 'org.tensorflow:tensorflow-lite:0.0.0-nightly'
+    implementation 'org.tensorflow:tensorflow-lite:0.0.0-nightly'
 }
