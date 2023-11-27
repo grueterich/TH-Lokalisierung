@@ -95,6 +95,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         mRotationUncal= mSensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE_UNCALIBRATED);
         mAccelerometer=mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
         mMangonemter=mSensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD);
+        useNN();
     }
 
     private void changePosition(float x, float y, float z) {
@@ -287,7 +288,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             //String file=assetFilePath("checkpoint_jit_latest.ptl");
             //String file=assetFilePath("checkpoint_jit_latest_light.ptl");
             //String file=assetFilePath("model.onnx");
-            String file=assetFilePath("checkpoint_latest.ptl");
+            String file=assetFilePath("checkpoint_jit_latest_light.ptl");
             module = LiteModuleLoader.load(file,null, CPU);
             Log.d("model2",module.toString());
         } catch (Exception e) {
@@ -297,7 +298,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         for(int i=0;i<72;i++) {
             gyrofinal[0]=i;
             gyrofinal[1]=i;
-            gyrofinal[2]=i;
+            gyrofinal[2]=+i;
             accfinal[0]=-i;
             accfinal[1]=-i;
             accfinal[2]=-i;
@@ -311,8 +312,9 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         try {
              Tensor res = module.forward(value).toTensor();
              Log.d("Ergebnis", res.toString());
-           //  int[] x_and_y=res.getDataAsIntArray();
-           // Log.d("Ergebnis Werte", x_and_y.toString());
+             float[] x_and_y=res.getDataAsFloatArray();
+            Log.d("Ergebnise", Arrays.toString(x_and_y));
+
         }catch(Error e){
             Log.e("Ergebnis",e.toString());
         }
