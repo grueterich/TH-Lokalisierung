@@ -35,6 +35,7 @@ import java.util.Arrays;
 import java.util.Map;
 
 import javax.vecmath.Quat4d;
+
 public class MainActivity extends AppCompatActivity implements SensorEventListener {
     private float position[] = new float[3];
     private float velocity[] = new float[3];
@@ -283,29 +284,40 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
 // Load in the model
         try {
-            String file=assetFilePath("checkpoint_lstm_jit_latest.pt");
+            //String file=assetFilePath("checkpoint_jit_latest.ptl");
             //String file=assetFilePath("checkpoint_jit_latest_light.ptl");
-            module = LiteModuleLoader.load(file);
+            //String file=assetFilePath("model.onnx");
+            String file=assetFilePath("checkpoint_latest.ptl");
+            module = LiteModuleLoader.load(file,null, CPU);
             Log.d("model2",module.toString());
         } catch (Exception e) {
             Log.e("model", "Unable to load model for file", e);
         }
-        float feature[] = new float[6];
-        System.arraycopy(gyrofinal,0,feature,0,3);
-        System.arraycopy(accfinal,0,feature,3,3);
-        long[] shape={1,1,6};
+        float feature[] = new float[72*6];
+        for(int i=0;i<72;i++) {
+            gyrofinal[0]=i;
+            gyrofinal[1]=i;
+            gyrofinal[2]=i;
+            accfinal[0]=-i;
+            accfinal[1]=-i;
+            accfinal[2]=-i;
+            System.arraycopy(gyrofinal, 0, feature, 0+6*i, 3);
+            System.arraycopy(accfinal, 0, feature, 3+6*i, 3);
+        }
+        long[] shape={72,1,6};
         Tensor inTensor = Tensor.fromBlob(feature,shape);
         Log.d("Tensor",inTensor.toString());
         IValue value=IValue.from(inTensor);
         try {
-             IValue res = module.forward(value);
-
-             Log.d("Ergebnis",res.toStr());
+             Tensor res = module.forward(value).toTensor();
+             Log.d("Ergebnis", res.toString());
+           //  int[] x_and_y=res.getDataAsIntArray();
+           // Log.d("Ergebnis Werte", x_and_y.toString());
         }catch(Error e){
             Log.e("Ergebnis",e.toString());
         }
 
-
+/*
       try {
           MappedByteBuffer buffer=loadFile();
           tflite = new Interpreter(buffer);
@@ -314,15 +326,15 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             Log.d("Model","Model not found", ex);
             ex.printStackTrace();
         }
+      tflite.toString();
         float inputVal[] = new float[6];
         System.arraycopy(gyrofinal,0,inputVal,0,3);
         System.arraycopy(accfinal,0,inputVal,3,3);
         float output[]=new float[2];
         tflite.run(inputVal,output);
 
-
+*/
         changeVelocity(accRunner);
-
 
     }
     public String assetFilePath(String assetName) throws IOException {
@@ -355,6 +367,9 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         long declareLength=fileDescriptor.getDeclaredLength();
         return fileChannel.map(FileChannel.MapMode.READ_ONLY,startOffset,declareLength);
     }
+
+
+
 }
 
 

@@ -12,4 +12,5 @@
     <string name="rotate_x" translatable="false">Rotation X</string>
     <string name="rotate_y" translatable="false">Rotation Y</string>
     <string name="rotate_z" translatable="false">Rotation Z</string>
+    <string name="title_activity_main3">MainActivity3</string>
 </resources>
