@@ -50,34 +50,34 @@
 
     <TextView
         android:id="@+id/x_value"
-        android:layout_width="22dp"
-        android:layout_height="17dp"
-        android:layout_marginTop="36dp"
+        android:layout_width="91dp"
+        android:layout_height="19dp"
+        android:layout_marginTop="28dp"
         android:text="0"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.332"
+        app:layout_constraintHorizontal_bias="0.339"
         app:layout_constraintStart_toEndOf="@+id/x_title"
         app:layout_constraintTop_toBottomOf="@+id/Title_overview" />
 
     <TextView
         android:id="@+id/y_value"
-        android:layout_width="28dp"
-        android:layout_height="19dp"
+        android:layout_width="87dp"
+        android:layout_height="24dp"
         android:layout_marginTop="16dp"
         android:text="0"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.34"
+        app:layout_constraintHorizontal_bias="0.35"
         app:layout_constraintStart_toEndOf="@+id/y_title"
         app:layout_constraintTop_toBottomOf="@+id/x_value" />
 
     <TextView
         android:id="@+id/z_value"
-        android:layout_width="25dp"
-        android:layout_height="18dp"
-        android:layout_marginTop="28dp"
+        android:layout_width="82dp"
+        android:layout_height="19dp"
+        android:layout_marginTop="24dp"
         android:text="0"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.337"
+        app:layout_constraintHorizontal_bias="0.354"
         app:layout_constraintStart_toEndOf="@+id/z_title"
         app:layout_constraintTop_toBottomOf="@+id/y_value" />
 
@@ -85,13 +85,13 @@
         android:id="@+id/velocity_title"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginStart="32dp"
+        android:layout_marginStart="24dp"
         android:layout_marginTop="28dp"
         android:text="@string/velocity_title"
         app:layout_constraintBottom_toTopOf="@+id/sensorDataField"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/z_title"
-        app:layout_constraintVertical_bias="0.244" />
+        app:layout_constraintVertical_bias="0.316" />
 
     <TextView
         android:id="@+id/velocity_value"
@@ -100,10 +100,10 @@
         android:text="0"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.141"
+        app:layout_constraintHorizontal_bias="0.137"
         app:layout_constraintStart_toEndOf="@+id/velocity_title"
         app:layout_constraintTop_toBottomOf="@+id/z_value"
-        app:layout_constraintVertical_bias="0.11" />
+        app:layout_constraintVertical_bias="0.135" />
 
     <TextView
         android:id="@+id/sensorDataField"

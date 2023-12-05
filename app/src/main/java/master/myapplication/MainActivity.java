@@ -51,7 +51,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private SensorManager mSensorManager;
     private Sensor mAccelerometerUncal;
     private Sensor mRotationUncal;
-    private Sensor mAccelerometer;
     private Sensor mMangonemter;
 
     private long lastTimeStampLinear;
@@ -75,6 +74,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private float gyro_bias[] = {0.03f,0.01f,-0.01f};
     private float gyrofinal[] = new float[3];
     private float accfinal[] = new float[3];
+    private float feature[] = new float[72*6];
 
     private int accRunner=0;
     private int gyroRunner=0;
@@ -93,18 +93,16 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         mSensorManager = (SensorManager)getSystemService(SENSOR_SERVICE);
         mAccelerometerUncal = mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER_UNCALIBRATED);
         mRotationUncal= mSensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE_UNCALIBRATED);
-        mAccelerometer=mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
         mMangonemter=mSensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD);
-        useNN();
     }
 
     private void changePosition(float x, float y, float z) {
         Log.d("Position",x+" "+y+" "+z);
-        this.position[0] = (float) (x*Math.cos(this.currentRotation)+y*Math.sin(this.currentRotation));
-        this.position[1] = (float) (-x*Math.sin(this.currentRotation)+y*Math.cos(this.currentRotation));
+        //this.position[0] = (float) (x*Math.cos(this.currentRotation)+y*Math.sin(this.currentRotation));
+        //this.position[1] = (float) (-x*Math.sin(this.currentRotation)+y*Math.cos(this.currentRotation));
         Log.d("Position",this.position[0]+" "+this.position[1]+" "+z);
         //We rotate alonge the z-azis, so this value stays the same
-        this.position[2] = z;
+        //this.position[2] = z;
         String xOutput = Float.toString(x);
         TextView xValue = findViewById(R.id.x_value);
         xValue.setText(xOutput);
@@ -133,12 +131,12 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         float newPositionZ=(float)(this.position[2]+0.5*this.accelaration[2]*timeInterval*timeInterval+this.velocity[2]*timeInterval);
         Log.d("Position",this.velocity[0]+" "+this.velocity[1]+" "+this.velocity[2]);
 
-        changePosition(newPositionX,newPositionY,newPositionZ);
+     //   changePosition(newPositionX,newPositionY,newPositionZ);
     }
     private void updateRotation(float rotation_z) {
         this.currentRotation=rotation_z;
         //Position stays the same, but with the values change with the new rotation
-        changePosition(this.position[0],this.position[1],this.position[2]);
+       // changePosition(this.position[0],this.position[1],this.position[2]);
     }
 
 
@@ -153,7 +151,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         super.onResume();
         mSensorManager.registerListener(this, mAccelerometerUncal, SensorManager.SENSOR_DELAY_NORMAL);
         mSensorManager.registerListener(this, mRotationUncal, SensorManager.SENSOR_DELAY_NORMAL);
-        mSensorManager.registerListener(this, mAccelerometer, SensorManager.SENSOR_DELAY_NORMAL);
         mSensorManager.registerListener(this, mMangonemter, SensorManager.SENSOR_DELAY_NORMAL);
 
         Log.d("error", "alles fine");
@@ -166,9 +163,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
 
     public void onSensorChanged(SensorEvent event) {
-        if(accRunner%10==0&&gyroRunner%10==0){
-            useNN();
-        }
+       // useNN();
         Log.d("Sensorevent","Event: "+event.sensor.getName()+" "+event.sensor.getType()+" "+event.timestamp);
         if (event.sensor.getType() == Sensor.TYPE_ACCELEROMETER_UNCALIBRATED) { //Sensor.TYPE_ACCELEROMETER Sensor.Type //Sensor.TYPE_ACCELEROMETER_UNCALIBRATED /7Sensor.TYPE_LINEAR_ACCELERATION
             updatePosition(event.values[0],event.values[1],event.values[2],event.timestamp);
@@ -186,7 +181,20 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             accfinal[0]=(float)acc_q.x;
             accfinal[1]=(float)acc_q.y;
             accfinal[2]=(float)acc_q.z;
-            accRunner++;
+            if(accRunner<72) {
+                Log.d("Acc", String.valueOf(accfinal[0]));
+                System.arraycopy(accfinal, 0, feature, 3 + 6 * accRunner, 3);
+                Log.d("Acc2", Arrays.toString(feature));
+                this.position[2]=feature[3 + 6 * accRunner];
+                changePosition(this.position[0],this.position[1],this.position[2]);
+                changeVelocity(accRunner);
+                accRunner++;
+            }else if (gyroRunner==72 && accRunner==72){
+                useNN();
+                accRunner=0;
+                gyroRunner=0;
+            }
+          //  accRunner++;
         }
         if (event.sensor.getType() == Sensor.TYPE_GYROSCOPE_UNCALIBRATED) { //Sensor.TYPE_GYROSCOPE_UNCALIBRATED
             updateRotation(event.values[2]);
@@ -205,7 +213,16 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             gyrofinal[0]=(float)gyro_q.x;
             gyrofinal[1]=(float)gyro_q.y;
             gyrofinal[2]=(float)gyro_q.z;
-            gyroRunner++;
+            if(gyroRunner<72) {
+                System.arraycopy(gyrofinal, 0, feature, 0 + 6 * gyroRunner, 3);
+                gyroRunner++;
+            }else if (gyroRunner==72 && accRunner==72){
+                useNN();
+                accRunner=0;
+                gyroRunner=0;
+            }
+               // gyroRunner++;
+
         }
         /*if (event.sensor.getType() == Sensor.TYPE_GYROSCOPE) { //Sensor.TYPE_GYROSCOPE_UNCALIBRATED
             updateRotation(event.values[2]);
@@ -288,14 +305,18 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             //String file=assetFilePath("checkpoint_jit_latest.ptl");
             //String file=assetFilePath("checkpoint_jit_latest_light.ptl");
             //String file=assetFilePath("model.onnx");
+
+
             String file=assetFilePath("checkpoint_jit_latest_light.ptl");
+            //String file=assetFilePath("ronin_lstm_checkpoint");
             module = LiteModuleLoader.load(file,null, CPU);
             Log.d("model2",module.toString());
         } catch (Exception e) {
             Log.e("model", "Unable to load model for file", e);
         }
-        float feature[] = new float[72*6];
-        for(int i=0;i<72;i++) {
+
+         feature= new float[2*6];
+     /*    for(int i=0;i<72;i++) {
             gyrofinal[0]=i;
             gyrofinal[1]=i;
             gyrofinal[2]=+i;
@@ -305,16 +326,43 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             System.arraycopy(gyrofinal, 0, feature, 0+6*i, 3);
             System.arraycopy(accfinal, 0, feature, 3+6*i, 3);
         }
+*/
         long[] shape={72,1,6};
+
+
         Tensor inTensor = Tensor.fromBlob(feature,shape);
         Log.d("Tensor",inTensor.toString());
+        Log.d("Tensorwerte", Arrays.toString(inTensor.getDataAsFloatArray()));
         IValue value=IValue.from(inTensor);
         try {
-             Tensor res = module.forward(value).toTensor();
-             Log.d("Ergebnis", res.toString());
-             float[] x_and_y=res.getDataAsFloatArray();
-            Log.d("Ergebnise", Arrays.toString(x_and_y));
 
+             Tensor res = module.forward(value).toTensor();
+            // Log.d("Ergebnis", res.toString());
+             float[] x_and_y=res.getDataAsFloatArray();
+            this.position[0]=x_and_y[0];
+            this.position[1]=x_and_y[1];
+             Log.d("Ergebnise", Arrays.toString(x_and_y));
+
+           /* long[] shape2= {2, 1, 6};
+            feature= new float[2*6];
+            for(int i=0;i<2;i++) {
+                gyrofinal[0]=i;
+                gyrofinal[1]=i;
+                gyrofinal[2]=+i;
+                accfinal[0]=-i;
+                accfinal[1]=-i;
+                accfinal[2]=-i;
+                System.arraycopy(gyrofinal, 0, feature, 0+6*i, 3);
+                System.arraycopy(accfinal, 0, feature, 3+6*i, 3);
+            }
+            Tensor inTensor2 = Tensor.fromBlob(feature,shape2);
+            Log.d("Tensor",inTensor2.toString());
+            Log.d("Tensorwerte", Arrays.toString(inTensor2.getDataAsFloatArray()));
+            value=IValue.from(inTensor2);
+            res = module.forward(value).toTensor();
+            x_and_y=res.getDataAsFloatArray();
+            Log.d("Ergebnise", Arrays.toString(x_and_y));
+*/
         }catch(Error e){
             Log.e("Ergebnis",e.toString());
         }
