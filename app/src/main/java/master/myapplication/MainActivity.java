@@ -77,6 +77,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private float accfinal[] = new float[3];
     private float feature[] = new float[72*6];
 
+    // Diese Werte sind zum Testen, ob die Trainigsdaten andere Ergebnisse als Eingabe in das Netz geben
     private float preGyroX[]= {-0.05511540116232253f,
             -0.05641679684788734f,
             -0.061611748290821645f,
@@ -532,20 +533,16 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         this.currentRotation=0;
         setContentView(R.layout.activity_main);
 
-        mSensorManager = (SensorManager)getSystemService(SENSOR_SERVICE);
+        mSensorManager = (SensorManager)getSystemService(SENSOR_SERVICE);  //Hier werden alle benötigten
         mAccelerometerUncal = mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER_UNCALIBRATED);
         mAccelerometer = mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
         mRotationUncal= mSensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE_UNCALIBRATED);
         mMangonemter=mSensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD);
     }
 
-    private void changePosition(float x, float y, float z) {
+    private void changePosition(float x, float y, float z) {  // Stellt die aktuelle Position im Bildschirm da
         Log.d("Position",x+" "+y+" "+z);
-        //this.position[0] = (float) (x*Math.cos(this.currentRotation)+y*Math.sin(this.currentRotation));
-        //this.position[1] = (float) (-x*Math.sin(this.currentRotation)+y*Math.cos(this.currentRotation));
         Log.d("Position",this.position[0]+" "+this.position[1]+" "+z);
-        //We rotate alonge the z-azis, so this value stays the same
-        //this.position[2] = z;
         String xOutput = Float.toString(x);
         TextView xValue = findViewById(R.id.x_value);
         xValue.setText(xOutput);
@@ -556,8 +553,8 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         TextView zValue = findViewById(R.id.z_value);
         zValue.setText(zOutput);
     }
-    private void updatePosition(float accileration_x, float accileration_y, float accileration_z, long timeStamp) {
-        if(this.lastTimeStampLinear == 0) {
+    private void updatePosition(float accileration_x, float accileration_y, float accileration_z, long timeStamp) { // Berechnung der Position mit nur den inertialen Daten
+        if(this.lastTimeStampLinear == 0) {                                                                         // War geplant als Abgleich von rohen inertialen Ergebnissen mit den Ergebnissen des neuronalen Netz
             this.lastTimeStampLinear = timeStamp;
         }
         double timeInterval = (timeStamp - lastTimeStampLinear) / 1000000000.0;
@@ -583,14 +580,14 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     }
 
 
-    private void changeVelocity(float v) {
-        this.velocity[0] = v;
-        String velOutput = Float.toString(v);
+    private void changeVelocity(float v) {                    // Zeigt die aktuelle Geschwindigkeit
+        this.velocity[0] = v;                                // SIE GIBT JEDOCH IM MOMENT DEN ACCELERATOR RUNNER aus, da dessen Wert der Funktion übergeben wird
+        String velOutput = Float.toString(v);                 // Solange das Neuronale nNtz noch nicht funktioniert iset es relevanter zu wissen wie lange es bis zum Trainingsstart kommt
         TextView vlValue = findViewById(R.id.velocity_value);
         vlValue.setText(velOutput);
     }
 
-    protected void onResume() {
+    protected void onResume() {      // Listener für die Sensoren werden deaktiviert wenn die APP minimiert(pausiert) ist und erst mit dem erneuten öffnen der APP neu geladen.
         super.onResume();
         mSensorManager.registerListener(this, mAccelerometerUncal, SensorManager.SENSOR_DELAY_NORMAL);
         mSensorManager.registerListener(this, mRotationUncal, SensorManager.SENSOR_DELAY_NORMAL);
@@ -615,17 +612,16 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             ((TextView) findViewById(R.id.accValueZ)).setText(Float.valueOf(event.values[2]).toString());
          Log.d("Acc", accRunner+"runner!!");
 
-
             if(accRunner<72) {
                 acc[0]=acc_scale[0]*(event.values[0]-event.values[3]);
                 acc[1]=acc_scale[1]*(event.values[1]-event.values[4]);
                 acc[2]=acc_scale[2]*(event.values[2]-event.values[5]);
-   /////////////////////////////////////////////////////
+   ///////////////////////////////////////////////////// Test mit pretrained Werten statt den aktuellen aus der Sensoren, sie müssen jedoch gleich im Anschluss verarbeitet werden
         /*        acc[0]=preAccX[accRunner];
                 acc[1]=preAccY[accRunner];
                 acc[2]=preAccZ[accRunner]; */
    ///////////////////////////////////////////////////////////////////
-                acc_uncal_q=new Quat4d(acc[0],acc[1],acc[2],0);
+                acc_uncal_q=new Quat4d(acc[0],acc[1],acc[2],0);    //Hier werden Quaternionen erstellt, um die Rotation entsprechend den Berechnungen beim neuronalen Netz durchzuführen
                 acc_q_inv.inverse(acc_uncal_q);
                 acc_q_temp.mul(acc_uncal_q,ori_q);
                 acc_q.mul(acc_q_temp,gyro_q_inv);
@@ -633,7 +629,8 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 accfinal[1]=(float)acc_q.y;
                 accfinal[2]=(float)acc_q.z;
                 Log.d("Acc", String.valueOf(accRunner));
-                System.arraycopy(accfinal, 0, feature, 3 + 6 * accRunner, 3);
+                System.arraycopy(accfinal, 0, feature, 3 + 6 * accRunner, 3); // über arraycopy können die Werte von accfinal in feature kopiert werden, sodass diese am Ende alle Werte enthält und an das Netzwerk übergibt.
+                                                                                                 // Es werden immer drei Werte übergeben (x,y,z) und der abstand zum start sind 3 als platzhalter für die erste gyroskop Werte und jeweils 6 Plätze für den aktuellen runner
                 Log.d("Acc2", String.valueOf(3+6*accRunner));
                 Log.d("Acc2", Arrays.toString(feature));
                 this.position[2]=feature[3 + 6 * accRunner];
@@ -641,7 +638,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 changeVelocity(accRunner);
                 accRunner++;
             }else if (gyroRunner==72 && accRunner==72){
-                useNN();
+                useNN();               // Nach 72 Werten von gyro und acc haben wir genug Werte, den aktuellen Tensor zu füllen und das Netz zu füllen
                 accRunner=0;
                 gyroRunner=0;
             }
@@ -716,7 +713,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
     Quat4d toQuaternion(double rollDeg, double pitchDeg, double azimuthDeg) // We get the orientation in degree
     {
-        double roll=rollDeg*(Math.PI/180);
+        double roll=rollDeg*(Math.PI/180);       //Anpassung der Einheit von degree zu radiant
         double pitch=pitchDeg*(Math.PI/180);
         double azimuth=azimuthDeg*(Math.PI/180);
 
@@ -751,7 +748,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             //String file=assetFilePath("model.onnx");
 
 
-            String file=assetFilePath("checkpoint_jit_latest_light.ptl");
+            String file=assetFilePath("checkpoint_jit_latest_light.ptl");   //Aktuelles Model, welche auf der CPU trainiert wurde
             //String file= String.valueOf(loadFile());
             //String file=assetFilePath("ronin_lstm_checkpoint");
             module = LiteModuleLoader.load(file,null, CPU);
@@ -760,7 +757,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             Log.e("model", "Unable to load model for file", e);
         }
 
-     /*   for(int i=0;i<72;i++) {
+     /*   for(int i=0;i<72;i++) {                                 // Test was er bei größeren Werten als der inertialen Daten ausgibt
             gyrofinal[0]=i;
             gyrofinal[1]=i;
             gyrofinal[2]=+i;
@@ -809,7 +806,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         changeVelocity(accRunner);
 
     }
-    public String assetFilePath(String assetName) throws IOException {
+    public String assetFilePath(String assetName) throws IOException {   // Läd aus dem assetPath die gesuchte Datei, wenn sie dort zuvor angelegt worden ist
         File file = new File(this.getFilesDir(), assetName);
         if (file.exists() && file.length() > 0) {
             Log.d("model",file.getAbsolutePath());
@@ -831,8 +828,8 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     }
 
 
-    private MappedByteBuffer loadFile() throws IOException {
-        AssetFileDescriptor fileDescriptor=this.getAssets().openFd("model.tflite");
+    private MappedByteBuffer loadFile() throws IOException {                                           //Lade Funktion für tflite Files
+        AssetFileDescriptor fileDescriptor=this.getAssets().openFd("model.tflite");           // Wird nur zum Testen von tflite genutzt, da Momentan die für mobile otimierten ptl Modelle genommen werden
         FileInputStream inputStream=new FileInputStream(fileDescriptor.getFileDescriptor());
         FileChannel fileChannel=inputStream.getChannel();
         long startOffset=fileDescriptor.getStartOffset();
